@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Acidentes de Trânsito</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <h1>Dashboard de Análise de Acidentes de Trânsito no Brasil</h1>
+        <p>Visualização dos dados de acidentes rodoviários federais de 2020 a 2025.</p>
+    </header>
+
+    <main class="container">
+        <!-- Seção de Comparações -->
+        <div class="section-title">Comparações e Rankings</div>
+        <div class="chart-card full-width">
+            <iframe src="interactive_charts/top_10_causas.html"></iframe>
+        </div>
+        <div class="chart-card">
+            <iframe src="interactive_charts/acidentes_por_dia.html"></iframe>
+        </div>
+        <div class="chart-card">
+            <iframe src="interactive_charts/bar_tipo_pista.html"></iframe>
+        </div>
+
+        <!-- Seção de Distribuições -->
+        <div class="section-title">Distribuições de Frequência</div>
+        <div class="chart-card">
+            <iframe src="interactive_charts/histograma_idade.html"></iframe>
+        </div>
+        <div class="chart-card">
+            <iframe src="interactive_charts/hist_ano_veiculo.html"></iframe>
+        </div>
+
+        <!-- Seção de Proporções -->
+        <div class="section-title">Análise de Proporções</div>
+        <div class="chart-card">
+            <iframe src="interactive_charts/proporcao_uf.html"></iframe>
+        </div>
+        <div class="chart-card">
+            <iframe src="interactive_charts/pie_fase_dia.html"></iframe>
+        </div>
+        <div class="chart-card full-width">
+            <iframe src="interactive_charts/pie_condicao_meteo.html"></iframe>
+        </div>
+
+        <!-- Seção de Relações -->
+        <div class="section-title">Relações entre Variáveis</div>
+        <div class="chart-card">
+            <iframe src="interactive_charts/scatter_idade_ano.html"></iframe>
+        </div>
+        <div class="chart-card">
+            <iframe src="interactive_charts/scatter_idade_feridos.html"></iframe>
+        </div>
+    </main>
+
+    <footer>
+        <p>Análise de dados realizada com Python, Pandas, Matplotlib e Seaborn.</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# Arquivos de dados grandes
+*.csv
+*.parquet
+
+# Arquivos temporários
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.pytest_cache/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema operacional
+.DS_Store
+Thumbs.db
