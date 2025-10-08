@@ -10,55 +10,63 @@
 <body>
     <header>
         <h1>Dashboard de Análise de Acidentes de Trânsito no Brasil</h1>
-        <p>Visualização dos dados de acidentes rodoviários federais de 2020 a 2025.</p>
+        <p>Visualização dos dados de acidentes rodoviários federais de 2024 a 2025.</p>
     </header>
 
     <main class="container">
         <!-- Seção de Comparações -->
         <div class="section-title">Comparações e Rankings</div>
         <div class="chart-card full-width">
-            <iframe src="interactive_charts/top_10_causas.html"></iframe>
+            <canvas id="chart_top_10_causas"></canvas>
         </div>
         <div class="chart-card">
-            <iframe src="interactive_charts/acidentes_por_dia.html"></iframe>
+            <canvas id="chart_acidentes_dia"></canvas>
         </div>
         <div class="chart-card">
-            <iframe src="interactive_charts/bar_tipo_pista.html"></iframe>
+            <canvas id="chart_tipo_pista"></canvas>
         </div>
 
         <!-- Seção de Distribuições -->
         <div class="section-title">Distribuições de Frequência</div>
         <div class="chart-card">
-            <iframe src="interactive_charts/histograma_idade.html"></iframe>
+            <canvas id="chart_hist_idade"></canvas>
         </div>
         <div class="chart-card">
-            <iframe src="interactive_charts/hist_ano_veiculo.html"></iframe>
+            <canvas id="chart_hist_ano"></canvas>
         </div>
 
         <!-- Seção de Proporções -->
         <div class="section-title">Análise de Proporções</div>
         <div class="chart-card">
-            <iframe src="interactive_charts/proporcao_uf.html"></iframe>
+            <canvas id="chart_proporcao_uf"></canvas>
         </div>
         <div class="chart-card">
-            <iframe src="interactive_charts/pie_fase_dia.html"></iframe>
+            <canvas id="chart_fase_dia"></canvas>
         </div>
         <div class="chart-card full-width">
-            <iframe src="interactive_charts/pie_condicao_meteo.html"></iframe>
+            <canvas id="chart_condicao_meteo"></canvas>
         </div>
 
         <!-- Seção de Relações -->
         <div class="section-title">Relações entre Variáveis</div>
         <div class="chart-card">
-            <iframe src="interactive_charts/scatter_idade_ano.html"></iframe>
+            <canvas id="chart_scatter_idade_ano"></canvas>
         </div>
         <div class="chart-card">
-            <iframe src="interactive_charts/scatter_idade_feridos.html"></iframe>
+            <canvas id="chart_scatter_idade_feridos"></canvas>
+        </div>
+        <div class="chart-card">
+            <canvas id="chart_scatter_feridos_mortos"></canvas>
+        </div>
+        <div class="chart-card">
+            <canvas id="chart_scatter_ano_feridos"></canvas>
         </div>
     </main>
 
     <footer>
-        <p>Análise de dados realizada com Python, Pandas, Matplotlib e Seaborn.</p>
+        <p>Análise de dados (2024-2025) | Renderização cliente com Chart.js</p>
     </footer>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

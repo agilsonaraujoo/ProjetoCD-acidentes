@@ -1,0 +1,13 @@
+{
+  "name": "dashboard-acidentes-transito",
+  "version": "1.0.0",
+  "description": "Dashboard de análise de acidentes de trânsito no Brasil (2024-2025)",
+  "main": "dashboard/index.html",
+  "scripts": {
+    "build": "python 01_preparar_dados.py && python 02_gerar_analises.py",
+    "start": "python -m http.server 8000"
+  },
+  "keywords": ["dashboard", "acidentes", "transito", "brasil", "analise"],
+  "author": "Dashboard Team",
+  "license": "MIT"
+}

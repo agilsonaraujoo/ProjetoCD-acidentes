@@ -1,157 +1,178 @@
 import pandas as pd
-import plotly.express as px
 import numpy as np
 import time
+import os
+import json
+
+try:
+    import polars as pl  # opcional para performance
+except Exception:
+    pl = None
 
 def gerar_analises():
     """
-    Carrega os dados pré-processados e gera todas as análises e visualizações.
+    Carrega o parquet e exporta JSONs leves para o frontend (Chart.js).
     """
-    # Carregar os dados pré-processados do arquivo Parquet
     print("Carregando dados pré-processados do arquivo Parquet...")
     start_time = time.time()
+    full_df = None
+    
     try:
-        full_df = pd.read_parquet('acidentes_tratados.parquet')
-        print(f"Dados carregados com sucesso em {time.time() - start_time:.2f} segundos.")
-        print(f"Total de {len(full_df)} linhas prontas para análise.")
-    except FileNotFoundError:
-        print("Erro: O arquivo 'acidentes_tratados.parquet' não foi encontrado.")
-        print("Por favor, execute o script '01_preparar_dados.py' primeiro.")
-        return
-
-    # --- ANÁLISES --- #
-    print("\n--- Realizando Análises ---")
-    top_10_causas = full_df['causa_acidente'].value_counts().head(10)
-    acidentes_por_uf = full_df['uf'].value_counts()
-
-    # --- VISUALIZAÇÕES INTERATIVAS COM PLOTLY ---
-    print("\nGerando gráficos interativos com Plotly...")
-
-    # Gráfico 1: Top 10 Causas de Acidentes
-    fig1 = px.bar(top_10_causas, y=top_10_causas.index, x=top_10_causas.values, orientation='h',
-                  labels={'y': 'Causa do Acidente', 'x': 'Número de Acidentes'},
-                  template='plotly_white', text=top_10_causas.values)
-    fig1.update_layout(
-        title={'text': '<b>Top 10 Causas de Acidentes</b><br><sup>Falta de atenção à condução é a causa predominante</sup>', 'x': 0.5},
-        yaxis={'categoryorder': 'total ascending'}
-    )
-    fig1.update_traces(
-        texttemplate='%{text:.2s}', textposition='outside',
-        hovertemplate='<b>Causa</b>: %{y}<br><b>Total de Acidentes</b>: %{x}<extra></extra>'
-    )
-    fig1.write_html('dashboard/interactive_charts/top_10_causas.html')
-    print("Gráfico 'top_10_causas.html' salvo.")
-
-    # Gráfico 2: Histograma da Idade dos Condutores (Otimizado)
-    idade_filtrada = full_df[(full_df['idade'] >= 18) & (full_df['idade'] <= 100)]['idade']
-    counts, bins = np.histogram(idade_filtrada, bins=40)
-    bin_centers = 0.5 * (bins[:-1] + bins[1:])
-    hist_data = pd.DataFrame({'Faixa de Idade': bin_centers, 'Frequência': counts})
-    hist_data['Faixa de Idade'] = hist_data['Faixa de Idade'].round(1).astype(str)
-    fig2 = px.bar(hist_data, x='Faixa de Idade', y='Frequência', template='plotly_white')
-    fig2.update_layout(
-        title={'text': '<b>Distribuição de Idade dos Condutores</b><br><sup>A maioria dos condutores envolvidos tem entre 20 e 40 anos</sup>', 'x': 0.5},
-        xaxis_title='Idade (Agrupada)', yaxis_title='Frequência (Nº de Pessoas)', bargap=0.1
-    )
-    fig2.update_traces(hovertemplate='<b>Idade Aprox.</b>: %{x}<br><b>Nº de Pessoas</b>: %{y}<extra></extra>')
-    fig2.write_html('dashboard/interactive_charts/histograma_idade.html')
-    print("Gráfico 'histograma_idade.html' salvo.")
-
-    # Gráfico 3: Proporção de Acidentes por Estado (Gráfico de Pizza)
-    top_10_uf = acidentes_por_uf.head(10)
-    outros_soma = acidentes_por_uf[10:].sum()
-    pie_data = pd.concat([top_10_uf, pd.Series([outros_soma], index=['Outros'])])
-    fig3 = px.pie(pie_data, values=pie_data.values, names=pie_data.index, template='plotly_white', hole=0.3)
-    fig3.update_layout(
-        title={'text': '<b>Proporção de Acidentes por Estado</b><br><sup>MG, PR e SC concentram a maior parte das ocorrências</sup>', 'x': 0.5}
-    )
-    fig3.update_traces(
-        textposition='inside', textinfo='percent+label',
-        hovertemplate='<b>Estado</b>: %{label}<br><b>Acidentes</b>: %{value}<br><b>Porcentagem</b>: %{percent}<extra></extra>'
-    )
-    fig3.write_html('dashboard/interactive_charts/proporcao_uf.html')
-    print("Gráfico 'proporcao_uf.html' salvo.")
-
-    # Gráfico 4: Total de Acidentes por Dia da Semana (Ordem Decrescente)
-    acidentes_por_dia_desc = full_df['dia_semana'].value_counts()
-    fig4 = px.bar(acidentes_por_dia_desc, x=acidentes_por_dia_desc.index, y=acidentes_por_dia_desc.values,
-                  labels={'index': 'Dia da Semana', 'y': 'Número de Acidentes'},
-                  template='plotly_white', text=acidentes_por_dia_desc.values)
-    fig4.update_layout(
-        title={'text': '<b>Total de Acidentes por Dia da Semana</b><br><sup>Fins de semana registram os maiores números de acidentes</sup>', 'x': 0.5},
-        xaxis={'categoryorder': 'total descending'}
-    )
-    fig4.update_traces(
-        texttemplate='%{text:.2s}', textposition='outside',
-        hovertemplate='<b>Dia</b>: %{x}<br><b>Total de Acidentes</b>: %{y}<extra></extra>'
-    )
-    fig4.write_html('dashboard/interactive_charts/acidentes_por_dia.html')
-    print("Gráfico 'acidentes_por_dia.html' salvo.")
-
-    # --- NOVOS GRÁFICOS PARA ATIVIDADE ---
-    print("\nGerando gráficos adicionais para a atividade...")
-    df_sample = full_df.sample(n=5000, random_state=42)
-
-    # Histograma: Ano de Fabricação do Veículo
-    ano_filtrado = full_df[(full_df['ano_fabricacao_veiculo'] >= 1980) & (full_df['ano_fabricacao_veiculo'] <= 2025)]['ano_fabricacao_veiculo']
-    fig_hist_ano = px.histogram(ano_filtrado, nbins=50, template='plotly_white')
-    fig_hist_ano.update_layout(title={'text': '<b>Distribuição do Ano de Fabricação dos Veículos</b><br><sup>Picos em anos recentes indicam renovação da frota</sup>', 'x': 0.5}, xaxis_title='Ano de Fabricação', yaxis_title='Frequência')
-    fig_hist_ano.write_html('dashboard/interactive_charts/hist_ano_veiculo.html')
-    print("Gráfico 'hist_ano_veiculo.html' salvo.")
-
-    # Pizza: Fase do Dia
-    fase_dia_counts = full_df['fase_dia'].value_counts()
-    fig_pie_fase_dia = px.pie(fase_dia_counts, values=fase_dia_counts.values, names=fase_dia_counts.index, template='plotly_white', hole=0.3)
-    fig_pie_fase_dia.update_layout(title={'text': '<b>Proporção de Acidentes por Fase do Dia</b><br><sup>Maioria ocorre durante o dia</sup>', 'x': 0.5})
-    fig_pie_fase_dia.update_traces(textposition='inside', textinfo='percent+label')
-    fig_pie_fase_dia.write_html('dashboard/interactive_charts/pie_fase_dia.html')
-    print("Gráfico 'pie_fase_dia.html' salvo.")
-
-    # Pizza: Condição Meteorológica
-    condicao_counts = full_df['condicao_metereologica'].value_counts().head(5)
-    fig_pie_condicao = px.pie(condicao_counts, values=condicao_counts.values, names=condicao_counts.index, template='plotly_white', hole=0.3)
-    fig_pie_condicao.update_layout(title={'text': '<b>Condições Meteorológicas nos Acidentes (Top 5)</b><br><sup>Céu claro é a condição predominante</sup>', 'x': 0.5})
-    fig_pie_condicao.update_traces(textposition='inside', textinfo='percent+label')
-    fig_pie_condicao.write_html('dashboard/interactive_charts/pie_condicao_meteo.html')
-    print("Gráfico 'pie_condicao_meteo.html' salvo.")
-
-    # Barras: Tipo de Pista
-    pista_counts = full_df['tipo_pista'].value_counts()
-    fig_bar_pista = px.bar(pista_counts, x=pista_counts.index, y=pista_counts.values, template='plotly_white', text=pista_counts.values)
-    fig_bar_pista.update_layout(title={'text': '<b>Total de Acidentes por Tipo de Pista</b><br><sup>Pistas simples registram o maior número de acidentes</sup>', 'x': 0.5}, xaxis_title='Tipo de Pista', yaxis_title='Número de Acidentes')
-    fig_bar_pista.update_traces(texttemplate='%{text:.2s}', textposition='outside')
-    fig_bar_pista.write_html('dashboard/interactive_charts/bar_tipo_pista.html')
-    print("Gráfico 'bar_tipo_pista.html' salvo.")
-
-    # Dispersão: Idade vs. Ano de Fabricação
-    fig_scatter_idade_ano = px.scatter(df_sample, x='idade', y='ano_fabricacao_veiculo', template='plotly_white', trendline='ols', trendline_color_override='red')
-    fig_scatter_idade_ano.update_layout(title={'text': '<b>Relação entre Idade do Condutor e Ano do Veículo</b><br><sup>Leve tendência de condutores mais jovens terem carros mais novos</sup>', 'x': 0.5}, xaxis_title='Idade do Condutor', yaxis_title='Ano de Fabricação do Veículo')
-    fig_scatter_idade_ano.write_html('dashboard/interactive_charts/scatter_idade_ano.html')
-    print("Gráfico 'scatter_idade_ano.html' salvo.")
-
-    # Dispersão: Idade vs. Total de Feridos
-    fig_scatter_idade_feridos = px.scatter(df_sample, x='idade', y='total_feridos', template='plotly_white')
-    fig_scatter_idade_feridos.update_layout(title={'text': '<b>Relação entre Idade do Condutor e Nº de Feridos</b><br><sup>Não há correlação clara visível</sup>', 'x': 0.5}, xaxis_title='Idade do Condutor', yaxis_title='Total de Feridos no Acidente')
-    fig_scatter_idade_feridos.write_html('dashboard/interactive_charts/scatter_idade_feridos.html')
-    print("Gráfico 'scatter_idade_feridos.html' salvo.")
-
-    # --- ANÁLISE ESTATÍSTICA ADICIONAL ---
-    print("\n--- Análise Estatística Descritiva ---")
-    colunas_estatisticas = ['mortos', 'total_feridos', 'idade']
-    for col in colunas_estatisticas:
-        media = full_df[col].mean()
-        mediana = full_df[col].median()
-        desvio_padrao = full_df[col].std()
-        print(f"\nEstatísticas para a coluna '{col}':")
-        print(f"  - Média: {media:.4f}")
-        print(f"  - Mediana: {mediana:.4f}")
-        print(f"  - Desvio Padrão: {desvio_padrao:.4f}")
-        if media > mediana:
-            print("  - Comparação: A média é maior que a mediana, sugerindo assimetria à direita.")
-        elif media < mediana:
-            print("  - Comparação: A média é menor que a mediana, sugerindo assimetria à esquerda.")
+        if pl is not None:
+            full_df = pl.read_parquet('acidentes_tratados.parquet').to_pandas()
         else:
-            print("  - Comparação: Média e mediana próximas, sugerindo distribuição simétrica.")
+            full_df = pd.read_parquet('acidentes_tratados.parquet')
+        print(f"Dados carregados em {time.time() - start_time:.2f}s. Linhas: {len(full_df)}")
+    except FileNotFoundError:
+        print("Erro: 'acidentes_tratados.parquet' não encontrado. Tentando ler CSVs 2024-2025...")
+    except Exception as e:
+        print(f"Falha ao ler parquet ({e}). Tentando CSVs 2024-2025...")
+
+    if full_df is None:
+        base = os.path.dirname(__file__)
+        candidatos = [os.path.join(base, 'acidentes2024.csv'), os.path.join(base, 'acidentes2025.csv')]
+        arquivos = [p for p in candidatos if os.path.exists(p)]
+        if not arquivos:
+            print("Nenhum CSV 2024/2025 encontrado. Abortando.")
+            return
+        frames = []
+        for p in arquivos:
+            try:
+                if pl is not None:
+                    frames.append(pl.read_csv(p, separator=';', encoding='latin-1').to_pandas())
+                else:
+                    frames.append(pd.read_csv(p, sep=';', encoding='latin-1', low_memory=False))
+            except Exception as e:
+                print(f"Falha ao ler {p}: {e}")
+        if not frames:
+            print("Falha geral ao ler CSVs. Abortando.")
+            return
+        full_df = pd.concat(frames, ignore_index=True)
+        print(f"CSVs carregados. Linhas: {len(full_df)}")
+
+    # Segurança: manter apenas 2024-2025
+    if 'data_inversa' in full_df.columns:
+        full_df['data_inversa'] = pd.to_datetime(full_df['data_inversa'], errors='coerce')
+        full_df = full_df[full_df['data_inversa'].dt.year.isin([2024, 2025])]
+        print(f"Registros após filtro 2024-2025: {len(full_df)}")
+
+    os.makedirs('dashboard/data', exist_ok=True)
+
+    # Utilidades
+    def write_json(name, payload):
+        with open(os.path.join('dashboard', 'data', name), 'w', encoding='utf-8') as f:
+            json.dump(payload, f, ensure_ascii=False)
+
+    # Top 10 causas
+    if 'causa_acidente' in full_df.columns:
+        s = full_df['causa_acidente'].fillna('Não Informado').value_counts().head(10)
+        write_json('top_10_causas.json', {'labels': s.index.tolist(), 'data': s.values.tolist()})
+
+    # Acidentes por dia da semana (ordem customizada)
+    if 'dia_semana' in full_df.columns:
+        ordem = [
+            'sábado','domingo','sexta-feira','segunda-feira','quinta-feira','quarta-feira','terça-feira'
+        ]
+        s = full_df['dia_semana'].fillna('não informado').str.lower().value_counts()
+        # reordenar conforme lista
+        labels = [d for d in ordem if d in s.index]
+        data = [int(s[d]) for d in labels]
+        write_json('acidentes_por_dia_semana.json', {'labels': labels, 'data': data})
+
+    # Tipo de pista
+    if 'tipo_pista' in full_df.columns:
+        s = full_df['tipo_pista'].fillna('Não Informado').value_counts()
+        write_json('tipo_pista.json', {'labels': s.index.tolist(), 'data': s.values.tolist()})
+
+    # Histograma idade
+    if 'idade' in full_df.columns:
+        idade = pd.to_numeric(full_df['idade'], errors='coerce')
+        idade = idade[(idade >= 18) & (idade <= 100)].dropna()
+        counts, bins = np.histogram(idade, bins=40)
+        mids = ((bins[:-1] + bins[1:]) / 2).round(1).astype(float).tolist()
+        write_json('hist_idade.json', {'bins': mids, 'counts': counts.astype(int).tolist()})
+
+    # Histograma ano de fabricação
+    if 'ano_fabricacao_veiculo' in full_df.columns:
+        anos = pd.to_numeric(full_df['ano_fabricacao_veiculo'], errors='coerce')
+        anos = anos[(anos >= 1980) & (anos <= 2025)].dropna()
+        counts, bins = np.histogram(anos, bins=50)
+        mids = ((bins[:-1] + bins[1:]) / 2).round(0).astype(int).tolist()
+        write_json('hist_ano_veiculo.json', {'bins': mids, 'counts': counts.astype(int).tolist()})
+
+    # Proporção por UF
+    if 'uf' in full_df.columns:
+        s = full_df['uf'].fillna('Não Informado').value_counts()
+        top = s.head(10)
+        outros = int(s.iloc[10:].sum())
+        labels = top.index.tolist() + (["Outros"] if outros > 0 else [])
+        data = top.values.tolist() + ([outros] if outros > 0 else [])
+        write_json('proporcao_uf.json', {'labels': labels, 'data': data})
+
+    # Pizza: fase do dia
+    if 'fase_dia' in full_df.columns:
+        s = full_df['fase_dia'].fillna('Não Informado').value_counts()
+        write_json('fase_dia.json', {'labels': s.index.tolist(), 'data': s.values.tolist()})
+
+    # Pizza: condição meteorológica (top 5)
+    if 'condicao_metereologica' in full_df.columns:
+        s = full_df['condicao_metereologica'].fillna('Não Informado').value_counts().head(5)
+        write_json('condicao_meteo.json', {'labels': s.index.tolist(), 'data': s.values.tolist()})
+
+    # Dispersões (amostras leves)
+    rng = np.random.default_rng(42)
+    def sample_points(df_points, max_points=4000):
+        if len(df_points) <= max_points:
+            return df_points
+        idx = rng.choice(len(df_points), size=max_points, replace=False)
+        return df_points.iloc[idx]
+
+    if {'idade','ano_fabricacao_veiculo'}.issubset(full_df.columns):
+        dfp = pd.DataFrame({
+            'x': pd.to_numeric(full_df['idade'], errors='coerce').clip(lower=0, upper=100),
+            'y': pd.to_numeric(full_df['ano_fabricacao_veiculo'], errors='coerce').clip(lower=1980, upper=2025)
+        }).dropna()
+        dfp = sample_points(dfp)
+        write_json('scatter_idade_ano.json', {'points': dfp.to_dict(orient='records')})
+
+    if {'idade','total_feridos'}.issubset(full_df.columns):
+        dfp = pd.DataFrame({
+            'x': pd.to_numeric(full_df['idade'], errors='coerce').clip(lower=0, upper=100),
+            'y': pd.to_numeric(full_df['total_feridos'], errors='coerce').clip(lower=0, upper=50)
+        }).dropna()
+        dfp = sample_points(dfp)
+        write_json('scatter_idade_feridos.json', {'points': dfp.to_dict(orient='records')})
+
+    if {'total_feridos','mortos'}.issubset(full_df.columns):
+        dfp = pd.DataFrame({
+            'x': pd.to_numeric(full_df['total_feridos'], errors='coerce').clip(lower=0, upper=50),
+            'y': pd.to_numeric(full_df['mortos'], errors='coerce').clip(lower=0, upper=10)
+        }).dropna()
+        dfp = sample_points(dfp)
+        write_json('scatter_feridos_mortos.json', {'points': dfp.to_dict(orient='records')})
+
+    if {'ano_fabricacao_veiculo','total_feridos'}.issubset(full_df.columns):
+        dfp = pd.DataFrame({
+            'x': pd.to_numeric(full_df['ano_fabricacao_veiculo'], errors='coerce').clip(lower=1980, upper=2025),
+            'y': pd.to_numeric(full_df['total_feridos'], errors='coerce').clip(lower=0, upper=50)
+        }).dropna()
+        dfp = sample_points(dfp)
+        write_json('scatter_ano_feridos.json', {'points': dfp.to_dict(orient='records')})
+
+    # Relatório simples com estatísticas (para consulta rápida)
+    try:
+        estat_cols = [c for c in ['mortos', 'total_feridos', 'idade'] if c in full_df.columns]
+        linhas = []
+        for c in estat_cols:
+            linhas.append(f"- {c}: média {full_df[c].mean():.2f}, mediana {full_df[c].median():.2f}, desvio {full_df[c].std():.2f}")
+        os.makedirs('dashboard', exist_ok=True)
+        with open('dashboard/analise_estatistica.md', 'w', encoding='utf-8') as f:
+            f.write('# Estatísticas rápidas\n\n')
+            f.write('\n'.join(linhas))
+    except Exception as e:
+        print(f"Falha ao escrever estatísticas: {e}")
+
+    print("JSONs gerados com sucesso em dashboard/data/")
 
 if __name__ == "__main__":
     gerar_analises()
